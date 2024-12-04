@@ -76,7 +76,7 @@ def access_my_safe():
 
 root = tk.Tk()
 root.title("Mon Application ")
-root.geometry("600x400")
+root.geometry("1200x800")
 
 main_frame = tk.Frame(root)
 main_frame.pack(fill="both", expand=True, padx=10, pady=10)
