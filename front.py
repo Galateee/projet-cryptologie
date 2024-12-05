@@ -18,10 +18,13 @@ def show_safe_page():
     add_button.pack(side="left", padx=10)
 
     delete_button = tk.Button(button_frame, text="Supprimer un mot de passe", command=delete_mdp)
-    delete_button.pack(side="left", padx=10)
+    delete_button.pack(side="right", padx=10)
 
     edit_button = tk.Button(button_frame, text="Modifier un mot de passe", command=edit_mdp)
-    edit_button.pack(side="left", padx=10)
+    edit_button.pack(padx=10)
+
+    export_coffre_button = tk.Button(button_frame, text="Exporter mon coffre-fort", command=export_coffre)
+    export_coffre_button.pack(pady=20)
 
     back_button = tk.Button(safe_frame, text="Retour", command=show_main_page)
     back_button.pack(pady=20)
@@ -47,6 +50,12 @@ def delete_mdp():
 
 def edit_mdp():
     """Modifier un mot de passe."""
+    safe_frame.pack_forget()
+
+    main_frame.pack(fill="both", expand=True, padx=10, pady=10)
+
+def export_coffre():
+    """Exporter le coffre-fort."""
     safe_frame.pack_forget()
 
     main_frame.pack(fill="both", expand=True, padx=10, pady=10)
