@@ -162,18 +162,36 @@ manager = PasswordManager()
 main_frame = tk.Frame(root)
 main_frame.pack(fill="both", expand=True, padx=10, pady=10)
 
-left_frame = tk.Frame(main_frame, bg="lightblue", width=300)
-left_frame.pack(side="left", fill="both", expand=True, padx=10, pady=10)
-
 right_frame = tk.Frame(main_frame, bg="lightgray", width=300)
 right_frame.pack(side="right", fill="both", expand=True, padx=10, pady=10)
 
 safe_frame = tk.Frame(root, bg="lightgreen")
+label = tk.Label(right_frame, text="Saisir vôtre mot de passe", font=("Helvetica", 12))
+label.pack(pady=20)
 
-text_input1 = tk.Text(main_frame, height=1, width=20)
-text_input1.pack(pady=10)
-text_input2 = tk.Text(main_frame, height=1, width=20)
-text_input2.pack(pady=10)
+
+left_frame = tk.Frame(main_frame, bg="lightblue", width=300)
+left_frame.pack(side="left", fill="both", expand=True, padx=10, pady=10)
+
+row1 = tk.Frame(left_frame, bg="lightblue")
+row1.pack(fill="x", pady=5)
+
+label1 = tk.Label(row1, text="Créer un nouveau mot de passe", font=("Helvetica", 12), bg="lightblue")
+label1.pack(side="left", padx=10)
+
+text_input1 = tk.Text(row1, height=1, width=20)
+text_input1.pack(side="left", padx=10)
+
+row2 = tk.Frame(left_frame, bg="lightblue")
+row2.pack(fill="x", pady=5)
+
+label2 = tk.Label(row2, text="Confirmer le mot de passe", font=("Helvetica", 12), bg="lightblue")
+label2.pack(side="left", padx=10)
+
+text_input2 = tk.Text(row2, height=1, width=20)
+text_input2.pack(side="left", padx=10)
+
+
 
 error_label = tk.Label(main_frame, fg="red")
 error_label.pack(pady=10)
