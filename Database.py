@@ -11,9 +11,10 @@ CREATE TABLE IF NOT EXISTS Dictionary(
     """)
 
 cursor.execute("""
-CREATE TABLE IF NOT EXISTS Password (
+CREATE TABLE IF NOT EXISTS Passwords (
     password_id INTEGER PRIMARY KEY AUTOINCREMENT,
     encrypted_password TEXT NOT NULL,
+    subject TEXT NOT NULL,
     id_dictionary INTEGER,
     FOREIGN KEY (id_dictionary) REFERENCES Dictionary(dictionary_id))
     """)
