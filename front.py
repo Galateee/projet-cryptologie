@@ -1,205 +1,158 @@
 import tkinter as tk
-from tkinter import filedialog, messagebox
+from tkinter import messagebox
 from cryptography.fernet import Fernet
+from tkinter import simpledialog
+import bcrypt
 
+from DBInterraction import create_dictionary, connection_dictionary, create_key, get_passwords, add_password, delete_password, update_password
 
-# Classe PasswordManager
-class PasswordManager:
+current_dictionary_id = None
+current_key = None
 
-    def __init__(self):
-        self.key = None
-        self.password_file = None
-        self.password_dict = {}
+def login_to_safe():
+    global current_dictionary_id, current_key
 
-    def create_key(self, path):
-        self.key = Fernet.generate_key()
-        with open(path, 'wb') as f:
-            f.write(self.key)
+    password = simpledialog.askstring("Connexion", "Entrez le mot de passe du coffre-fort :", show="*")
+    if not password:
+        return
 
-    def load_key(self, path):
-        with open(path, 'rb') as f:
-            self.key = f.read()
+    dictionary_id = connection_dictionary(password)
+    if dictionary_id:
+        current_dictionary_id = dictionary_id
+        current_key = create_key()
+        messagebox.showinfo("Succès", "Connexion réussie !")
+        show_safe_page()
+    else:
+        messagebox.showerror("Erreur", "Mot de passe incorrect.")
 
-    def create_password_file(self, path, initial_values=None):
-        self.password_file = path
-        if initial_values is not None:
-            for key, value in initial_values.items():
-                self.add_password(key, value)
+def create_new_safe():
+    global current_dictionary_id, current_key
 
-    def load_password_file(self, path):
-        self.password_file = path
-        with open(path, 'r') as f:
-            for line in f:
-                site, encrypted = line.split(":")
-                self.password_dict[site] = Fernet(self.key).decrypt(encrypted.encode()).decode()
+    password = simpledialog.askstring("Création", "Entrez un mot de passe pour le nouveau coffre-fort :", show="*")
+    if not password:
+        return
 
-    def add_password(self, site, password):
-        self.password_dict[site] = password
-        if self.password_file is not None:
-            with open(self.password_file, 'a+') as f:
-                encrypted = Fernet(self.key).encrypt(password.encode())
-                f.write(site + ":" + encrypted.decode() + "\n")
+    dictionary_id = create_dictionary(password)
+    current_dictionary_id = dictionary_id
+    current_key = create_key()
+    messagebox.showinfo("Succès", "Nouveau coffre-fort créé avec succès !")
+    show_safe_page()
 
-    def get_password(self, site):
-        return self.password_dict.get(site, "Mot de passe introuvable")
+def display_passwords():
+    if current_dictionary_id is None:
+        messagebox.showerror("Erreur", "Vous devez d'abord vous connecter.")
+        return
 
+    passwords = get_passwords(current_dictionary_id, current_key)
+    popup = tk.Toplevel()
+    popup.title("Mots de passe enregistrés")
 
-# Application Tkinter
-def show_safe_page():
-    """Affiche la page du coffre-fort."""
-    main_frame.pack_forget()  
-    safe_frame.pack(fill="both", expand=True, padx=10, pady=10) 
+    for subject, password in passwords:
+        tk.Label(popup, text=f"Sujet : {subject} | Mot de passe : {password}").pack()
 
-    label = tk.Label(safe_frame, text="Bienvenue dans votre coffre-fort", font=("Helvetica", 16), bg="lightgreen")
-    label.pack(pady=20)
+def add_new_password():
+    if current_dictionary_id is None:
+        messagebox.showerror("Erreur", "Vous devez d'abord vous connecter.")
+        return
 
-    button_frame = tk.Frame(safe_frame)
-    button_frame.pack(pady=10)
-
-    add_button = tk.Button(button_frame, text="Ajouter un nouveau mot de passe", command=add_new_mdp)
-    add_button.pack(side="left", padx=10)
-
-    delete_button = tk.Button(button_frame, text="Afficher un mot de passe", command=view_mdp)
-    delete_button.pack(side="right", padx=10)
-
-    export_coffre_button = tk.Button(button_frame, text="Charger un fichier", command=load_password_file)
-    export_coffre_button.pack(pady=20)
-
-    back_button = tk.Button(safe_frame, text="Retour", command=show_main_page)
-    back_button.pack(pady=20)
-
-
-def clear_frame(frame):
-    """Supprime tous les widgets."""
-    for widget in frame.winfo_children():
-        widget.destroy()
-
-
-def add_new_mdp():
-    """Ajoute un nouveau mot de passe."""
     def save_password():
-        site = site_entry.get()
+        subject = subject_entry.get()
         password = password_entry.get()
-        if site and password:
-            manager.add_password(site, password)
-            messagebox.showinfo("Succès", f"Mot de passe ajouté pour {site}.")
-            popup.destroy()
-        else:
-            messagebox.showwarning("Attention", "Veuillez remplir tous les champs.")
+        if not subject or not password:
+            messagebox.showwarning("Attention", "Tous les champs doivent être remplis.")
+            return
+
+        add_password(current_dictionary_id, current_key, password, subject)
+        messagebox.showinfo("Succès", "Mot de passe ajouté avec succès !")
+        popup.destroy()
 
     popup = tk.Toplevel()
     popup.title("Ajouter un mot de passe")
-    tk.Label(popup, text="Site :").grid(row=0, column=0, padx=10, pady=10)
-    site_entry = tk.Entry(popup)
-    site_entry.grid(row=0, column=1, padx=10, pady=10)
-
-    tk.Label(popup, text="Mot de passe :").grid(row=1, column=0, padx=10, pady=10)
+    tk.Label(popup, text="Sujet :").pack(pady=5)
+    subject_entry = tk.Entry(popup)
+    subject_entry.pack(pady=5)
+    tk.Label(popup, text="Mot de passe :").pack(pady=5)
     password_entry = tk.Entry(popup, show="*")
-    password_entry.grid(row=1, column=1, padx=10, pady=10)
+    password_entry.pack(pady=5)
+    tk.Button(popup, text="Enregistrer", command=save_password).pack(pady=10)
 
-    tk.Button(popup, text="Enregistrer", command=save_password).grid(row=2, column=0, columnspan=2, pady=10)
+def delete_password_popup():
+    if current_dictionary_id is None:
+        messagebox.showerror("Erreur", "Vous devez d'abord vous connecter.")
+        return
 
+    def confirm_deletion():
+        subject = subject_entry.get()
+        if not subject:
+            messagebox.showwarning("Attention", "Le champ Sujet est vide.")
+            return
 
-def view_mdp():
-    """Afficher un mot de passe."""
-    def search_password():
-        site = site_entry.get()
-        if site:
-            password = manager.get_password(site)
-            result_label.config(text=f"Mot de passe pour {site} : {password}")
+        delete_password(current_dictionary_id, subject)
+        messagebox.showinfo("Succès", f"Mot de passe pour '{subject}' supprimé avec succès.")
+        popup.destroy()
 
     popup = tk.Toplevel()
-    popup.title("Afficher un mot de passe")
-    tk.Label(popup, text="Site :").grid(row=0, column=0, padx=10, pady=10)
-    site_entry = tk.Entry(popup)
-    site_entry.grid(row=0, column=1, padx=10, pady=10)
+    popup.title("Supprimer un mot de passe")
+    tk.Label(popup, text="Sujet à supprimer :").pack(pady=5)
+    subject_entry = tk.Entry(popup)
+    subject_entry.pack(pady=5)
+    tk.Button(popup, text="Supprimer", command=confirm_deletion).pack(pady=10)
 
-    tk.Button(popup, text="Rechercher", command=search_password).grid(row=1, column=0, columnspan=2, pady=10)
-    result_label = tk.Label(popup, text="", fg="blue")
-    result_label.grid(row=2, column=0, columnspan=2, pady=10)
+def update_password_popup():
+    if current_dictionary_id is None:
+        messagebox.showerror("Erreur", "Vous devez d'abord vous connecter.")
+        return
 
+    def confirm_update():
+        subject = subject_entry.get()
+        new_password = new_password_entry.get()
+        if not subject or not new_password:
+            messagebox.showwarning("Attention", "Tous les champs doivent être remplis.")
+            return
 
-def load_password_file():
-    """Charger un fichier de mots de passe."""
-    path = filedialog.askopenfilename(title="Charger un fichier de mots de passe", filetypes=[("Fichiers texte", "*.txt")])
-    if path:
-        try:
-            manager.load_password_file(path)
-            messagebox.showinfo("Succès", "Fichier chargé avec succès.")
-        except Exception as e:
-            messagebox.showerror("Erreur", f"Erreur lors du chargement du fichier : {e}")
+        update_password(current_dictionary_id, current_key, subject, new_password)
+        messagebox.showinfo("Succès", f"Mot de passe pour '{subject}' mis à jour avec succès.")
+        popup.destroy()
 
+    popup = tk.Toplevel()
+    popup.title("Mettre à jour un mot de passe")
+    tk.Label(popup, text="Sujet :").pack(pady=5)
+    subject_entry = tk.Entry(popup)
+    subject_entry.pack(pady=5)
+    tk.Label(popup, text="Nouveau mot de passe :").pack(pady=5)
+    new_password_entry = tk.Entry(popup, show="*")
+    new_password_entry.pack(pady=5)
+    tk.Button(popup, text="Mettre à jour", command=confirm_update).pack(pady=10)
+
+def show_safe_page():
+    main_frame.pack_forget()
+    safe_frame.pack(fill="both", expand=True, padx=10, pady=10)
 
 def show_main_page():
-    """Retourne à la page principale."""
-    safe_frame.pack_forget()  
-    main_frame.pack(fill="both", expand=True, padx=10, pady=10) 
-
-
-def access_my_new_safe():
-    mot_de_passe_1 = text_input1.get("1.0", tk.END).strip()
-    mot_de_passe_2 = text_input2.get("1.0", tk.END).strip()
-    if mot_de_passe_1 == mot_de_passe_2 and mot_de_passe_1 != "":
-        show_safe_page()
-    else:
-        error_label.config(text="Erreur : Les mots de passe ne correspondent pas ou sont vides.")
-
-
-def access_my_safe():
-    """Vérifie si le mot de passe du coffre-fort est correct."""
-    valeur = entry.get()
-    if valeur == "1234":
-        show_safe_page()
-    else:
-        error_label_right.config(text="Mot de passe incorrect.")
-
+    safe_frame.pack_forget()
+    main_frame.pack(fill="both", expand=True, padx=10, pady=10)
 
 root = tk.Tk()
-root.title("Mon Application ")
-root.geometry("1200x800")
-manager = PasswordManager() 
+root.title("Gestionnaire de mot de passe")
+root.geometry("1000x600")
 
 main_frame = tk.Frame(root)
 main_frame.pack(fill="both", expand=True, padx=10, pady=10)
 
-right_frame = tk.Frame(main_frame, bg="lightgray", width=300)
-right_frame.pack(side="right", fill="both", expand=True, padx=10, pady=10)
+tk.Label(main_frame, text="Bienvenue dans le gestionnaire de mots de passe", font=("Helvetica", 16)).pack(pady=20)
 
-safe_frame = tk.Frame(root, bg="lightgreen")
-label = tk.Label(right_frame, text="Saisir vôtre mot de passe", font=("Helvetica", 12))
-label.pack(pady=20)
+tk.Button(main_frame, text="Se connecter", command=login_to_safe).pack(pady=10)
+tk.Button(main_frame, text="Créer un nouveau coffre-fort", command=create_new_safe).pack(pady=10)
 
+safe_frame = tk.Frame(root)
 
-left_frame = tk.Frame(main_frame, bg="lightblue", width=300)
-left_frame.pack(side="left", fill="both", expand=True, padx=10, pady=10)
-
-row1 = tk.Frame(left_frame, bg="lightblue")
-row1.pack(fill="x", pady=5)
-
-label1 = tk.Label(row1, text="Créer un nouveau mot de passe", font=("Helvetica", 12), bg="lightblue")
-label1.pack(side="left", padx=10)
-
-text_input1 = tk.Text(row1, height=1, width=20)
-text_input1.pack(side="left", padx=10)
-
-row2 = tk.Frame(left_frame, bg="lightblue")
-row2.pack(fill="x", pady=5)
-
-label2 = tk.Label(row2, text="Confirmer le mot de passe", font=("Helvetica", 12), bg="lightblue")
-label2.pack(side="left", padx=10)
-
-text_input2 = tk.Text(row2, height=1, width=20)
-text_input2.pack(side="left", padx=10)
-
-
-
-error_label = tk.Label(main_frame, fg="red")
-error_label.pack(pady=10)
-
-login_button = tk.Button(main_frame, text="Se connecter", command=access_my_new_safe)
-login_button.pack(pady=20)
-
-back_button = tk.Button(main_frame, text="Retour", command=show_main_page)
-back_button.pack(pady=20)
+tk.Label(safe_frame, text="Coffre-fort", font=("Helvetica", 16)).pack(pady=20)
+tk.Button(safe_frame, text="Afficher les mots de passe", command=display_passwords).pack(pady=10)
+tk.Button(safe_frame, text="Ajouter un mot de passe", command=add_new_password).pack(pady=10)
+tk.Button(safe_frame, text="Supprimer un mot de passe", command=delete_password_popup).pack(pady=10)
+tk.Button(safe_frame, text="Mettre à jour un mot de passe", command=update_password_popup).pack(pady=10)
+tk.Button(safe_frame, text="Déconnexion", command=show_main_page).pack(pady=20)
 
 root.mainloop()
+
+
